@@ -32,7 +32,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	void MoveForward(float Value);
-	//void MoveTurn();
+	void MoveRight(float Value);
+	
 
 public:	
 	// Called every frame
