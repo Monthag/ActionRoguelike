@@ -5,6 +5,8 @@
 #include <GameFramework/CharacterMovementComponent.h>
 #include <GameFramework/Pawn.h>
 #include <DrawDebugHelpers.h>
+#include "ARInteractionComponent.h"
+#include "ARAttributeComponent.h"
 
 // Sets default values
 AARCharacter::AARCharacter()
@@ -18,6 +20,10 @@ AARCharacter::AARCharacter()
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
 	CameraComp->SetupAttachment(SpringArmComp);
+
+	InteractionComp = CreateDefaultSubobject<UARInteractionComponent>("InteractionComp");
+
+	AttributeComp = CreateDefaultSubobject<UARAttributeComponent>("AttributeComp");
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
@@ -42,7 +48,7 @@ void AARCharacter::MoveForward(float Value)
 void AARCharacter::MoveRight(float Value)
 {
 	FRotator ControlRot = GetControlRotation();
-	ControlRot.Pitch = 0.0f;
+	ControlRot.Pitch = 0.0f;	
 	ControlRot.Roll = 0.0f;
 
 	// X = Forward (Red)
@@ -52,6 +58,41 @@ void AARCharacter::MoveRight(float Value)
 	FVector RightVector = FRotationMatrix(ControlRot).GetScaledAxis(EAxis::Y);
 
 	AddMovementInput(RightVector, Value);
+}
+
+void AARCharacter::PrimaryAttack()
+{
+	PlayAnimMontage(AttackAnim);
+	
+	GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, this, &AARCharacter::PrimaryAttack_TimeElapsed, 0.2f);
+
+	//GetWorldTimerManager().ClearTimer((TimerHandle_PrimaryAttack);
+
+}
+
+void AARCharacter::PrimaryAttack_TimeElapsed()
+{
+
+	if (ensure(ProjectileClass))
+	{
+		FVector HandLocation = GetMesh()->GetSocketLocation("Muzzle_01");
+
+		FTransform SpawnTM = FTransform(GetControlRotation(), HandLocation);
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParams.Instigator = this;
+
+		GetWorld()->SpawnActor<AActor>(ProjectileClass, SpawnTM, SpawnParams);
+	}
+	
+}
+
+void AARCharacter::PrimaryInteract()
+{
+	if (InteractionComp)
+	{
+		InteractionComp->PrimaryInteract();
+	}
 }
 
 // Called every frame
@@ -90,5 +131,8 @@ void AARCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 
+	PlayerInputComponent->BindAction("PrimaryAttack", IE_Pressed, this, &AARCharacter::PrimaryAttack);
+	PlayerInputComponent->BindAction("PrimaryInteract", IE_Pressed, this, &AARCharacter::PrimaryInteract);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AARCharacter::Jump);
 }
 
